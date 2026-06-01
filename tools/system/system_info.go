@@ -29,8 +29,6 @@ func systemInfo(_ tool.Context, _ SystemInfoArgs) (SystemInfoResult, error) {
 		switch {
 		case p.OpenRouter.APIKey != "":
 			provider = "openrouter (auto)"
-		case p.Gemini.APIKey != "":
-			provider = "gemini (auto)"
 		default:
 			provider = "unknown"
 		}

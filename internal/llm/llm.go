@@ -13,7 +13,6 @@ import (
 type Provider string
 
 const (
-	ProviderGemini     Provider = "gemini"
 	ProviderOpenRouter Provider = "openrouter"
 )
 
@@ -25,7 +24,6 @@ type Config struct {
 type ProviderFactory func(ctx context.Context, modelName string) (model.LLM, error)
 
 var factories = map[Provider]ProviderFactory{
-	ProviderGemini:     providers.NewGeminiModel,
 	ProviderOpenRouter: providers.NewOpenRouterModel,
 }
 
@@ -43,11 +41,6 @@ func LoadFromConfig(cfg *config.Settings) (Config, error) {
 		if modelName == "" {
 			modelName = "google/gemini-3.1-flash-lite"
 		}
-	case ProviderGemini:
-		modelName = strings.TrimSpace(p.Gemini.Model)
-		if modelName == "" {
-			modelName = "google/gemini-3.1-flash-lite"
-		}
 	}
 
 	if modelName == "" {
@@ -60,8 +53,6 @@ func LoadFromConfig(cfg *config.Settings) (Config, error) {
 func resolveProvider(cfg *config.Settings) (Provider, error) {
 	if raw := strings.TrimSpace(cfg.Provider); raw != "" {
 		switch Provider(strings.ToLower(raw)) {
-		case ProviderGemini:
-			return ProviderGemini, nil
 		case ProviderOpenRouter, "openai":
 			return ProviderOpenRouter, nil
 		}
@@ -70,9 +61,6 @@ func resolveProvider(cfg *config.Settings) (Provider, error) {
 	p := config.CurrentProviders()
 	if p.OpenRouter.APIKey != "" {
 		return ProviderOpenRouter, nil
-	}
-	if p.Gemini.APIKey != "" {
-		return ProviderGemini, nil
 	}
 
 	return "", fmt.Errorf("no API key found")

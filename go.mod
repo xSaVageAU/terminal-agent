@@ -4,7 +4,6 @@ go 1.25.0
 
 require (
 	github.com/byebyebruce/adk-go-openai v0.0.0-20251208092515-f5b0ac07643e
-	github.com/joho/godotenv v1.5.1
 	github.com/sashabaranov/go-openai v1.41.2
 	google.golang.org/adk v1.4.0
 	google.golang.org/genai v1.58.0

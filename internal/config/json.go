@@ -14,7 +14,6 @@ type ProviderConfig struct {
 }
 
 type ProviderSettings struct {
-	Gemini     ProviderConfig `json:"gemini,omitempty"`
 	OpenRouter ProviderConfig `json:"openrouter,omitempty"`
 }
 

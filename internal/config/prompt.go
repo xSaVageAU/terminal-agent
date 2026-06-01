@@ -26,23 +26,20 @@ func PromptModelSelection() error {
 	}
 
 	fmt.Println("Select LLM Provider:")
-	fmt.Println("  1) gemini")
-	fmt.Println("  2) openrouter")
-	fmt.Printf("Enter selection (1-2) or press Enter to keep [%s]: ", currProvider)
+	fmt.Println("  1) openrouter")
+	fmt.Printf("Enter selection (1) or press Enter to keep [%s]: ", currProvider)
 
 	var chosenProvider string
 	if scanner.Scan() {
 		input := strings.TrimSpace(scanner.Text())
 		switch input {
-		case "1", "gemini":
-			chosenProvider = "gemini"
-		case "2", "openrouter":
+		case "1", "openrouter":
 			chosenProvider = "openrouter"
 		case "":
 			chosenProvider = currProvider
 		default:
 			lower := strings.ToLower(input)
-			if lower == "gemini" || lower == "openrouter" {
+			if lower == "openrouter" {
 				chosenProvider = lower
 			} else {
 				fmt.Printf("Invalid choice %q, keeping current [%s]\n", input, currProvider)
@@ -56,43 +53,6 @@ func PromptModelSelection() error {
 
 	// 2. CONFIGURE BASED ON PROVIDER
 	switch chosenProvider {
-	case "gemini":
-		currKey := p.Gemini.APIKey
-		mask := "empty"
-		if currKey != "" {
-			mask = "****"
-			if len(currKey) > 8 {
-				mask = currKey[:4] + "..." + currKey[len(currKey)-4:]
-			}
-		}
-		fmt.Printf("Enter Gemini API Key (Google) [current: %s]: ", mask)
-		if scanner.Scan() {
-			keyInput := strings.TrimSpace(scanner.Text())
-			if keyInput != "" {
-				p.Gemini.APIKey = keyInput
-				fmt.Println("API Key updated.")
-			} else {
-				fmt.Println("Keeping current API Key.")
-			}
-		}
-
-		currModel := strings.TrimSpace(p.Gemini.Model)
-		if currModel == "" {
-			currModel = "gemini-1.5-flash"
-		}
-
-		fmt.Printf("Enter Gemini Model name [current: %s]: ", currModel)
-		if scanner.Scan() {
-			modelInput := strings.TrimSpace(scanner.Text())
-			if modelInput != "" {
-				p.Gemini.Model = modelInput
-				fmt.Printf("Model set to: %s\n", modelInput)
-			} else {
-				p.Gemini.Model = currModel
-				fmt.Printf("Keeping model: %s\n", currModel)
-			}
-		}
-
 	case "openrouter":
 		currKey := p.OpenRouter.APIKey
 		mask := "empty"
