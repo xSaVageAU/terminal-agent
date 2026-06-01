@@ -16,29 +16,32 @@ import (
 )
 
 func main() {
-	if len(os.Args) > 1 && os.Args[1] == "model" {
-		if err := config.PromptModelSelection(); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-			os.Exit(1)
-		}
-		os.Exit(0)
-	}
-
 	cfg, err := config.LoadJSONConfig()
 	if err != nil {
 		log.Printf("warning: failed to load json config: %v", err)
 	}
 
-	// If config is empty (newly generated), force run model configuration
+	// If config is empty (newly generated), write template and exit
 	if cfg.Provider == "" {
-		fmt.Println("No configuration found. Launching setup...")
-		if err := config.PromptModelSelection(); err != nil {
-			log.Fatalf("failed to run initial setup: %v", err)
+		fmt.Println("No configuration found. Writing template to ~/.adk-test/config.json and exiting...")
+		
+		stubSettings := &config.Settings{
+			Provider:      "openrouter",
+			StreamingMode: "chunk",
+			NoColor:       false,
+			WorkspaceRoot: "",
 		}
-		cfg, err = config.LoadJSONConfig()
-		if err != nil {
-			log.Fatalf("failed to reload config after setup: %v", err)
+		stubProviders := &config.ProviderSettings{
+			OpenRouter: config.ProviderConfig{
+				Model:  "google/gemini-3.1-flash-lite",
+				APIKey: "YOUR_OPENROUTER_API_KEY_HERE",
+			},
 		}
+
+		if err := config.SaveJSONConfig(stubSettings, stubProviders); err != nil {
+			log.Fatalf("failed to write config template: %v", err)
+		}
+		os.Exit(0)
 	}
 
 	ctx := context.Background()

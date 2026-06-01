@@ -8,20 +8,20 @@ import (
 )
 
 type ProviderConfig struct {
-	Model   string `json:"model,omitempty"`
-	APIKey  string `json:"api_key,omitempty"`
-	BaseURL string `json:"base_url,omitempty"`
+	Model   string `json:"model"`
+	APIKey  string `json:"api_key"`
+	BaseURL string `json:"base_url"`
 }
 
 type ProviderSettings struct {
-	OpenRouter ProviderConfig `json:"openrouter,omitempty"`
+	OpenRouter ProviderConfig `json:"openrouter"`
 }
 
 type Settings struct {
-	Provider      string `json:"provider,omitempty"`
-	StreamingMode string `json:"streaming_mode,omitempty"`
-	NoColor       bool   `json:"no_color,omitempty"`
-	WorkspaceRoot string `json:"workspace_root,omitempty"`
+	Provider      string `json:"provider"`
+	StreamingMode string `json:"streaming_mode"`
+	NoColor       bool   `json:"no_color"`
+	WorkspaceRoot string `json:"workspace_root"`
 }
 
 var current *Settings = &Settings{}
