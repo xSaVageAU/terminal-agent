@@ -1,9 +1,11 @@
 package configeditor
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
+	"charm.land/bubbles/v2/key"
 	"charm.land/huh/v2"
 	"github.com/xSaVageAU/terminal-agent/internal/config"
 )
@@ -82,141 +84,163 @@ func Run() error {
 
 	theme := huh.ThemeFunc(huh.ThemeCatppuccin)
 
+	newForm := func(groups ...*huh.Group) *huh.Form {
+		f := huh.NewForm(groups...)
+		f.WithTheme(theme)
+		f.WithShowHelp(true)
+		km := huh.NewDefaultKeyMap()
+		km.Quit = key.NewBinding(key.WithKeys("ctrl+c", "esc"))
+		f.WithKeyMap(km)
+		return f
+	}
+
+	clearScreen := func() {
+		fmt.Print("\033[2J\033[H")
+	}
+
 	for {
 		var action string
-		menu := huh.NewForm(
-			huh.NewGroup(
-				huh.NewSelect[string]().
-					Title("Configuration Menu").
-					Options(
-						huh.NewOption("Provider (OpenRouter only)", "provider"),
-						huh.NewOption("Model", "model"),
-						huh.NewOption("API Key & Base URL", "api"),
-						huh.NewOption("Streaming Mode", "streaming"),
-						huh.NewOption("Workspace Root", "workspace"),
-						huh.NewOption("Display Settings", "display"),
-						huh.NewOption("Save & Exit", "save"),
-					).
-					Value(&action),
-			),
+		g := huh.NewGroup(
+			huh.NewSelect[string]().
+				Title("Configuration Menu").
+				Options(
+					huh.NewOption("Provider (OpenRouter only)", "provider"),
+					huh.NewOption("Model", "model"),
+					huh.NewOption("API Key & Base URL", "api"),
+					huh.NewOption("Streaming Mode", "streaming"),
+					huh.NewOption("Workspace Root", "workspace"),
+					huh.NewOption("Display Settings", "display"),
+					huh.NewOption("Save & Exit", "save"),
+				).
+				Value(&action),
 		)
-		menu.WithTheme(theme)
+		menu := newForm(g)
 
+		clearScreen()
 		if err := menu.Run(); err != nil {
+			if errors.Is(err, huh.ErrUserAborted) {
+				return nil
+			}
 			return err
 		}
 		if action == "" {
-			fmt.Println("\nDiscarded.")
 			return nil
 		}
 
 		switch action {
 		case "provider":
-			f := huh.NewForm(
-				huh.NewGroup(
-					huh.NewSelect[string]().
-						Title("Provider").
-						Options(
-							huh.NewOption("OpenRouter", "openrouter"),
-						).
-						Value(&provider),
-				),
+			g := huh.NewGroup(
+				huh.NewSelect[string]().
+					Title("Provider").
+					Description("Esc to go back").
+					Options(
+						huh.NewOption("OpenRouter", "openrouter"),
+					).
+					Value(&provider),
 			)
-			f.WithTheme(theme)
-			if err := f.Run(); err != nil {
+			clearScreen()
+			if err := newForm(g).Run(); err != nil {
+				if errors.Is(err, huh.ErrUserAborted) {
+					continue
+				}
 				return err
 			}
 
 		case "model":
-			f := huh.NewForm(
-				huh.NewGroup(
-					huh.NewSelect[string]().
-						Title("Model").
-						Description("Pick a known model or choose Custom to type your own.").
-						Options(modelSelectOpts()...).
-						Value(&modelSelect),
-				),
-				huh.NewGroup(
-					huh.NewInput().
-						Title("Custom Model ID").
-						Description("Enter the model identifier (e.g. org/model-name).").
-						Value(&customModel).
-						Placeholder(defaultModel),
-				).WithHideFunc(func() bool {
-					return modelSelect != customModelSentinel
-				}),
+			g1 := huh.NewGroup(
+				huh.NewSelect[string]().
+					Title("Model").
+					Description("Pick a known model or choose Custom to type your own. Esc to go back").
+					Options(modelSelectOpts()...).
+					Value(&modelSelect),
 			)
-			f.WithTheme(theme)
-			if err := f.Run(); err != nil {
+			g2 := huh.NewGroup(
+				huh.NewInput().
+					Title("Custom Model ID").
+					Description("Enter the model identifier (e.g. org/model-name).").
+					Value(&customModel).
+					Placeholder(defaultModel),
+			).WithHideFunc(func() bool {
+				return modelSelect != customModelSentinel
+			})
+			clearScreen()
+			if err := newForm(g1, g2).Run(); err != nil {
+				if errors.Is(err, huh.ErrUserAborted) {
+					continue
+				}
 				return err
 			}
 
 		case "api":
-			f := huh.NewForm(
-				huh.NewGroup(
-					huh.NewInput().
-						Title("API Key").
-						Description("OpenRouter API key.").
-						Value(&apiKey).
-						EchoMode(huh.EchoModePassword),
-				),
-				huh.NewGroup(
-					huh.NewInput().
-						Title("Base URL").
-						Description("OpenRouter API endpoint.").
-						Value(&baseURL).
-						Placeholder("https://openrouter.ai/api/v1"),
-				),
+			g1 := huh.NewGroup(
+				huh.NewInput().
+					Title("API Key").
+					Description("OpenRouter API key. Esc to go back").
+					Value(&apiKey).
+					EchoMode(huh.EchoModePassword),
 			)
-			f.WithTheme(theme)
-			if err := f.Run(); err != nil {
+			g2 := huh.NewGroup(
+				huh.NewInput().
+					Title("Base URL").
+					Description("OpenRouter API endpoint.").
+					Value(&baseURL).
+					Placeholder("https://openrouter.ai/api/v1"),
+			)
+			clearScreen()
+			if err := newForm(g1, g2).Run(); err != nil {
+				if errors.Is(err, huh.ErrUserAborted) {
+					continue
+				}
 				return err
 			}
 
 		case "streaming":
-			f := huh.NewForm(
-				huh.NewGroup(
-					huh.NewSelect[string]().
-						Title("Streaming Mode").
-						Description("How LLM responses are streamed.").
-						Options(
-							huh.NewOption("chunk — word-by-word", "chunk"),
-							huh.NewOption("sentence — line-by-line", "sentence"),
-							huh.NewOption("none", ""),
-						).
-						Value(&streamingMode),
-				),
+			g := huh.NewGroup(
+				huh.NewSelect[string]().
+					Title("Streaming Mode").
+					Description("How LLM responses are streamed. Esc to go back").
+					Options(
+						huh.NewOption("chunk — word-by-word", "chunk"),
+						huh.NewOption("sentence — line-by-line", "sentence"),
+						huh.NewOption("none", ""),
+					).
+					Value(&streamingMode),
 			)
-			f.WithTheme(theme)
-			if err := f.Run(); err != nil {
+			clearScreen()
+			if err := newForm(g).Run(); err != nil {
+				if errors.Is(err, huh.ErrUserAborted) {
+					continue
+				}
 				return err
 			}
 
 		case "workspace":
-			f := huh.NewForm(
-				huh.NewGroup(
-					huh.NewInput().
-						Title("Workspace Root").
-						Description("Absolute path to restrict file operations (empty = CWD).").
-						Value(&cfg.WorkspaceRoot),
-				),
+			g := huh.NewGroup(
+				huh.NewInput().
+					Title("Workspace Root").
+					Description("Absolute path to restrict file operations (empty = CWD). Esc to go back").
+					Value(&cfg.WorkspaceRoot),
 			)
-			f.WithTheme(theme)
-			if err := f.Run(); err != nil {
+			clearScreen()
+			if err := newForm(g).Run(); err != nil {
+				if errors.Is(err, huh.ErrUserAborted) {
+					continue
+				}
 				return err
 			}
 
 		case "display":
-			f := huh.NewForm(
-				huh.NewGroup(
-					huh.NewConfirm().
-						Title("No Color").
-						Description("Disable colored terminal output.").
-						Value(&cfg.NoColor),
-				),
+			g := huh.NewGroup(
+				huh.NewConfirm().
+					Title("No Color").
+					Description("Disable colored terminal output. Esc to go back").
+					Value(&cfg.NoColor),
 			)
-			f.WithTheme(theme)
-			if err := f.Run(); err != nil {
+			clearScreen()
+			if err := newForm(g).Run(); err != nil {
+				if errors.Is(err, huh.ErrUserAborted) {
+					continue
+				}
 				return err
 			}
 
