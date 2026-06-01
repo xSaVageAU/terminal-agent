@@ -69,6 +69,11 @@ func Run() error {
 		provider = "openrouter"
 	}
 
+	terminalTUI := cfg.TerminalTUI
+	if terminalTUI == "" {
+		terminalTUI = "classic"
+	}
+
 	modelSelect := providers.OpenRouter.Model
 	if modelSelect == "" {
 		modelSelect = defaultModel
@@ -120,6 +125,7 @@ func Run() error {
 					huh.NewOption("Streaming Mode", "streaming"),
 					huh.NewOption("Workspace Root", "workspace"),
 					huh.NewOption("Display Settings", "display"),
+					huh.NewOption("Terminal TUI Theme", "theme"),
 					huh.NewOption("Save & Exit", "save"),
 				).
 				Value(&action),
@@ -254,6 +260,25 @@ func Run() error {
 				return err
 			}
 
+		case "theme":
+			g := huh.NewGroup(
+				huh.NewSelect[string]().
+					Title("Terminal TUI Theme").
+					Description("Choose your interactive terminal interface style. Esc to go back").
+					Options(
+						huh.NewOption("classic (Standard colorful CLI)", "classic"),
+						huh.NewOption("bubbles (Rich Bubble Tea TUI)", "bubbles"),
+					).
+					Value(&terminalTUI),
+			)
+			clearScreen()
+			if err := newForm(g).Run(); err != nil {
+				if errors.Is(err, huh.ErrUserAborted) {
+					continue
+				}
+				return err
+			}
+
 		case "save":
 			if modelSelect == customModelSentinel {
 				modelSelect = customModel
@@ -261,6 +286,7 @@ func Run() error {
 
 			cfg.Provider = provider
 			cfg.StreamingMode = streamingMode
+			cfg.TerminalTUI = terminalTUI
 			newProviders := &config.ProviderSettings{
 				OpenRouter: config.ProviderConfig{
 					Model:   strings.TrimSpace(modelSelect),

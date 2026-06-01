@@ -1,4 +1,4 @@
-package terminal
+package classic
 
 import (
 	"fmt"

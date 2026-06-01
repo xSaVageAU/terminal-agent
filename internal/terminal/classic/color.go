@@ -1,4 +1,4 @@
-package terminal
+package classic
 
 import (
 	"fmt"
@@ -54,4 +54,3 @@ func printConfirmPrompt(toolName, args string) {
 }
 
 func printError(msg string) { fmt.Println(paint(red+bold, "✗ "+msg)) }
-

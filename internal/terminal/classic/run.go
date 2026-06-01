@@ -1,5 +1,4 @@
-// Package terminal provides a colored interactive CLI with visible tool I/O.
-package terminal
+package classic
 
 import (
 	"bufio"
@@ -7,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"os/signal"
 	"strings"
@@ -20,8 +18,10 @@ import (
 	"google.golang.org/genai"
 )
 
+type Terminal struct{}
+
 // Run starts the interactive REPL for the given root agent.
-func Run(ctx context.Context, root agent.Agent) error {
+func (t *Terminal) Run(ctx context.Context, root agent.Agent) error {
 	ctx, cancel := signal.NotifyContext(ctx, os.Interrupt)
 	defer cancel()
 
@@ -45,7 +45,7 @@ func Run(ctx context.Context, root agent.Agent) error {
 		return fmt.Errorf("create runner: %w", err)
 	}
 
-	streamingMode := agent.StreamingModeSSE
+	streamingMode := resolveStreamingMode()
 	reader := bufio.NewReader(os.Stdin)
 
 	fmt.Println()
@@ -172,25 +172,3 @@ func isExit(s string) bool {
 	}
 	return false
 }
-
-// ShouldUse returns true when the app should run the custom terminal instead of ADK's stock console.
-func ShouldUse(args []string) bool {
-	if len(args) == 0 {
-		return true
-	}
-	return args[0] == "console"
-}
-
-// StripConsoleKeyword removes a leading "console" subcommand token if present.
-func StripConsoleKeyword(args []string) []string {
-	if len(args) > 0 && args[0] == "console" {
-		return args[1:]
-	}
-	return args
-}
-
-// LogStartup prints which model is active.
-func LogStartup(desc string) {
-	log.Printf("Using %s", desc)
-}
-

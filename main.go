@@ -87,7 +87,8 @@ func main() {
 		log.Fatalf("failed to create agent: %v", err)
 	}
 
-	if err := terminal.Run(ctx, a); err != nil {
+	term := terminal.New()
+	if err := term.Run(ctx, a); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}

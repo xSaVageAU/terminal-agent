@@ -22,6 +22,7 @@ type Settings struct {
 	StreamingMode string `json:"streaming_mode"`
 	NoColor       bool   `json:"no_color"`
 	WorkspaceRoot string `json:"workspace_root"`
+	TerminalTUI   string `json:"terminal_tui"`
 }
 
 var current *Settings = &Settings{}
