@@ -8,6 +8,7 @@ import (
 
 	internalagent "github.com/xSaVageAU/terminal-agent/internal/agent"
 	"github.com/xSaVageAU/terminal-agent/internal/config"
+	"github.com/xSaVageAU/terminal-agent/internal/configeditor"
 	"github.com/xSaVageAU/terminal-agent/internal/llm"
 	"github.com/xSaVageAU/terminal-agent/internal/terminal"
 	"github.com/xSaVageAU/terminal-agent/tools"
@@ -16,6 +17,14 @@ import (
 )
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "editconfig" {
+		if err := configeditor.Run(); err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+		return
+	}
+
 	cfg, err := config.LoadJSONConfig()
 	if err != nil {
 		log.Printf("warning: failed to load json config: %v", err)
