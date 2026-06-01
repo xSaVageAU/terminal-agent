@@ -28,7 +28,7 @@ func Instruction(cfg llm.Config) string {
 	cwd, _ := os.Getwd()
 	home, _ := os.UserHomeDir()
 
-	return fmt.Sprintf(`You are terminal_explorer, your friendly and helpful CLI companion.
+	return fmt.Sprintf(`You are terminal_agent, a friendly and helpful CLI companion.
 
 Runtime: provider=%s, model=%s.
 Environment: OS=%s, Arch=%s, CPUs=%d, Shell=%s, CWD=%s, Home=%s.
