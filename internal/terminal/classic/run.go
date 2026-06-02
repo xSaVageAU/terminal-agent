@@ -50,8 +50,10 @@ func (t *Terminal) Run(ctx context.Context, root agent.Agent) error {
 
 	fmt.Println()
 	fmt.Println(paint(dim, "ADK terminal agent — tool calls and results are shown in color."))
-	fmt.Println(paint(dim, "Type 'exit' or 'quit' to leave."))
+	fmt.Println(paint(dim, "Type 'exit' or 'quit' to leave. Type 'yolo' to toggle auto-approval of tool confirmations."))
 	userPrompt()
+
+	yoloMode := false
 
 	for {
 		line, err := reader.ReadString('\n')
@@ -71,9 +73,19 @@ func (t *Terminal) Run(ctx context.Context, root agent.Agent) error {
 			fmt.Println(paint(dim, "Goodbye."))
 			return nil
 		}
+		if strings.EqualFold(line, "yolo") {
+			yoloMode = !yoloMode
+			if yoloMode {
+				fmt.Println(paint(magenta+bold, "⚡ YOLO Mode ON — tool confirmations will be auto-approved."))
+			} else {
+				fmt.Println(paint(dim, "  YOLO Mode OFF — tool confirmations will be prompted."))
+			}
+			userPrompt()
+			continue
+		}
 
 		msg := genai.NewContentFromText(line+"\n", genai.RoleUser)
-		if err := runAgentTurn(ctx, r, reader, userID, resp.Session.ID(), msg, streamingMode, true); err != nil {
+		if err := runAgentTurn(ctx, r, reader, userID, resp.Session.ID(), msg, streamingMode, true, yoloMode); err != nil {
 			printError(err.Error())
 		}
 		userPrompt()
@@ -88,6 +100,7 @@ func runAgentTurn(
 	input *genai.Content,
 	streamingMode agent.StreamingMode,
 	showAgentHeader bool,
+	yoloMode bool,
 ) error {
 	for {
 		state := newRenderState(streamingMode)
@@ -107,7 +120,7 @@ func runAgentTurn(
 			return nil
 		}
 
-		parts, err := collectConfirmations(reader, state.pendingConfirm)
+		parts, err := collectConfirmations(reader, state.pendingConfirm, yoloMode)
 		if err != nil {
 			return err
 		}
@@ -118,7 +131,7 @@ func runAgentTurn(
 	}
 }
 
-func collectConfirmations(reader *bufio.Reader, calls []*genai.FunctionCall) ([]*genai.Part, error) {
+func collectConfirmations(reader *bufio.Reader, calls []*genai.FunctionCall, yoloMode bool) ([]*genai.Part, error) {
 	parts := make([]*genai.Part, 0, len(calls))
 	for _, fc := range calls {
 		orig, err := toolconfirmation.OriginalCallFrom(fc)
@@ -127,12 +140,21 @@ func collectConfirmations(reader *bufio.Reader, calls []*genai.FunctionCall) ([]
 			toolName = orig.Name
 		}
 
-		fmt.Print(paint(magenta, fmt.Sprintf("  %s: approve? [y/N]: ", toolName)))
-		answer, err := reader.ReadString('\n')
-		if err != nil {
-			return nil, err
+		var approved bool
+		if yoloMode {
+			approved = true
+			fmt.Println(paint(magenta+bold, fmt.Sprintf("⚡ %s: auto-approved (YOLO)", toolName)))
+		} else {
+			fmt.Print(paint(magenta, fmt.Sprintf("  %s: approve? [y/N]: ", toolName)))
+			answer, err := reader.ReadString('\n')
+			if err != nil {
+				return nil, err
+			}
+			approved = strings.HasPrefix(strings.ToLower(strings.TrimSpace(answer)), "y")
+			if !approved {
+				fmt.Println(paint(dim, "  (skipped)"))
+			}
 		}
-		approved := strings.HasPrefix(strings.ToLower(strings.TrimSpace(answer)), "y")
 
 		parts = append(parts, &genai.Part{
 			FunctionResponse: &genai.FunctionResponse{
@@ -143,9 +165,6 @@ func collectConfirmations(reader *bufio.Reader, calls []*genai.FunctionCall) ([]
 				},
 			},
 		})
-		if !approved {
-			fmt.Println(paint(dim, "  (skipped)"))
-		}
 	}
 	return parts, nil
 }
