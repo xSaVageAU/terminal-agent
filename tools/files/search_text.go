@@ -13,9 +13,9 @@ import (
 )
 
 type SearchTextArgs struct {
-	Query      string `json:"query" jsonschema:"Text to search for (case-insensitive substring match)."`
-	Path       string `json:"path" jsonschema:"Directory under workspace to search, or empty for entire workspace."`
-	MaxMatches int    `json:"max_matches" jsonschema:"Maximum matches to return (default 30, max 100)."`
+	Query      string  `json:"query" jsonschema:"Text to search for (case-insensitive substring match)."`
+	Path       *string `json:"path,omitempty" jsonschema:"Directory under workspace to search, or empty for entire workspace. (optional)"`
+	MaxMatches *int    `json:"max_matches,omitempty" jsonschema:"Maximum matches to return (optional, default 30, max 100)."`
 }
 
 type TextMatch struct {
@@ -33,7 +33,11 @@ type SearchTextResult struct {
 const maxSearchFileBytes = 512 * 1024
 
 func searchText(_ tool.Context, args SearchTextArgs) (SearchTextResult, error) {
-	root, err := workspace.ResolveInWorkspace(args.Path)
+	pathVal := ""
+	if args.Path != nil {
+		pathVal = *args.Path
+	}
+	root, err := workspace.ResolveInWorkspace(pathVal)
 	if err != nil {
 		return SearchTextResult{}, err
 	}
@@ -41,7 +45,11 @@ func searchText(_ tool.Context, args SearchTextArgs) (SearchTextResult, error) {
 	if query == "" {
 		return SearchTextResult{}, fmt.Errorf("query must not be empty")
 	}
-	limit := workspace.ClampInt(args.MaxMatches, 30, 100)
+	maxMatchesVal := 30
+	if args.MaxMatches != nil {
+		maxMatchesVal = *args.MaxMatches
+	}
+	limit := workspace.ClampInt(maxMatchesVal, 30, 100)
 
 	var matches []TextMatch
 	truncated := false

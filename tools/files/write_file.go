@@ -12,7 +12,7 @@ import (
 type WriteFileArgs struct {
 	Path    string `json:"path" jsonschema:"File path relative to the workspace root."`
 	Content string `json:"content" jsonschema:"Full text content to write."`
-	Append  bool   `json:"append" jsonschema:"If true, append to the file instead of overwriting."`
+	Append  *bool  `json:"append,omitempty" jsonschema:"If true, append to the file instead of overwriting. (optional, default false)"`
 }
 
 type WriteFileResult struct {
@@ -26,9 +26,18 @@ func writeFile(_ tool.Context, args WriteFileArgs) (WriteFileResult, error) {
 	if err != nil {
 		return WriteFileResult{}, err
 	}
+
+	lock := getFileLock(abs)
+	lock.Lock()
+	defer lock.Unlock()
+
 	mode := "overwrite"
 	var n int
-	if args.Append {
+	isAppend := false
+	if args.Append != nil {
+		isAppend = *args.Append
+	}
+	if isAppend {
 		f, err := os.OpenFile(abs, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 		if err != nil {
 			return WriteFileResult{}, err

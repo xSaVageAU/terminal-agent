@@ -24,6 +24,10 @@ func patchFile(_ tool.Context, args PatchFileArgs) (string, error) {
 		return "", err
 	}
 
+	lock := getFileLock(abs)
+	lock.Lock()
+	defer lock.Unlock()
+
 	file, err := os.Open(abs)
 	if err != nil {
 		return "", err

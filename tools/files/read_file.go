@@ -11,7 +11,7 @@ import (
 
 type ReadFileArgs struct {
 	Path     string `json:"path" jsonschema:"File path relative to the workspace root."`
-	MaxLines int    `json:"max_lines" jsonschema:"Maximum number of lines to return (default 200, max 500)."`
+	MaxLines *int   `json:"max_lines,omitempty" jsonschema:"Maximum number of lines to return (optional, default 200, max 500)."`
 }
 
 type ReadFileResult struct {
@@ -25,11 +25,20 @@ func readFile(_ tool.Context, args ReadFileArgs) (ReadFileResult, error) {
 	if err != nil {
 		return ReadFileResult{}, err
 	}
+
+	lock := getFileLock(abs)
+	lock.Lock()
+	defer lock.Unlock()
+
 	data, err := os.ReadFile(abs)
 	if err != nil {
 		return ReadFileResult{}, err
 	}
-	max := workspace.ClampInt(args.MaxLines, 200, 500)
+	maxVal := 200
+	if args.MaxLines != nil {
+		maxVal = *args.MaxLines
+	}
+	max := workspace.ClampInt(maxVal, 200, 500)
 	lines := strings.Split(string(data), "\n")
 	truncated := len(lines) > max
 	if truncated {

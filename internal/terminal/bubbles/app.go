@@ -115,10 +115,20 @@ type App struct {
 
 	pendingConfirm  []*genai.FunctionCall
 	currentTurnText string
+	yoloMode        bool
+	tickActive      bool
 }
 
 func (a *App) Init() tea.Cmd {
 	return textarea.Blink
+}
+
+func (a *App) startTickIfNeeded() tea.Cmd {
+	if a.tickActive {
+		return nil
+	}
+	a.tickActive = true
+	return tickCmd()
 }
 
 func (a *App) runAgentTurnCmd(input *genai.Content) tea.Cmd {
@@ -161,10 +171,23 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.viewport.GotoBottom()
 
 	case tea.KeyMsg:
-		switch msg.Type {
-		case tea.KeyCtrlC, tea.KeyEsc:
+		switch msg.String() {
+		case "ctrl+c", "esc":
 			return a, tea.Quit
-		case tea.KeyEnter:
+		case "ctrl+y":
+			a.yoloMode = !a.yoloMode
+			statusStr := "OFF"
+			if a.yoloMode {
+				statusStr = "ON"
+			}
+			a.messages = append(a.messages, ChatMessage{
+				Role:    "tool_result",
+				Content: fmt.Sprintf("YOLO Mode toggled: %s (auto-approves tool confirmations)", statusStr),
+			})
+			a.viewport.SetContent(a.renderChat())
+			a.viewport.GotoBottom()
+			return a, nil
+		case "enter":
 			if a.stage == StageConfirm {
 				// Enter acts as approval denial (Default: No)
 				return a, a.handleConfirmationAction(false)
@@ -188,7 +211,7 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			a.viewport.GotoBottom()
 
 			input := genai.NewContentFromText(inputStr+"\n", genai.RoleUser)
-			cmds = append(cmds, a.runAgentTurnCmd(input), tickCmd())
+			cmds = append(cmds, a.runAgentTurnCmd(input), a.startTickIfNeeded())
 		}
 
 		// Handle confirmation keys in StageConfirm
@@ -207,6 +230,8 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			a.viewport.SetContent(a.renderChat())
 			a.viewport.GotoBottom()
 			cmds = append(cmds, tickCmd())
+		} else {
+			a.tickActive = false
 		}
 
 	case eventMsg:
@@ -265,6 +290,9 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case doneMsg:
 		a.sending = false
 		if len(a.pendingConfirm) > 0 {
+			if a.yoloMode {
+				return a, a.handleConfirmationAction(true)
+			}
 			a.stage = StageConfirm
 			a.textarea.Blur()
 		} else {
@@ -330,7 +358,7 @@ func (a *App) handleConfirmationAction(approved bool) tea.Cmd {
 	a.viewport.GotoBottom()
 
 	input := &genai.Content{Role: genai.RoleUser, Parts: parts}
-	return tea.Batch(a.runAgentTurnCmd(input), tickCmd())
+	return tea.Batch(a.runAgentTurnCmd(input), a.startTickIfNeeded())
 }
 
 func (a *App) View() string {
@@ -340,13 +368,15 @@ func (a *App) View() string {
 
 	divider := dividerStyle.Render(strings.Repeat("─", a.width))
 	statusText := "ADK Bubbles TUI"
-	if a.stage == StageConfirm {
+	if a.yoloMode {
+		statusText = "YOLO MODE ON"
+	} else if a.stage == StageConfirm {
 		statusText = "CONFIRMATION NEEDED"
 	}
 	status := statusBarStyle.Render(fmt.Sprintf(" %s ", statusText))
-	hintText := " Enter: send │ Esc: quit "
+	hintText := " Enter: send │ Ctrl+Y: yolo │ Esc: quit "
 	if a.stage == StageConfirm {
-		hintText = " y: Approve │ n: Deny │ Esc: quit "
+		hintText = " y: Approve │ n: Deny │ Ctrl+Y: yolo │ Esc: quit "
 	}
 	hint := hintStyle.Render(hintText)
 
